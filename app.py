@@ -37,39 +37,42 @@ def run_code():
     language = request.form['language']
     code = request.form['code']
     input_data = request.form.get('input', '')
-    
+
     filename = f"{uuid.uuid4()}.{language}"
     filepath = f"/app/code/{filename}"
-    
+
     with open(filepath, 'w') as f:
         f.write(code)
-    
+
     start_time = time.time()
-    
+
     if language == 'cpp':
         container = client.containers.get('online-ide-cpp-1')
-        cmd = ["/bin/sh", "-c", f"g++ /code/{filename} -o /code/prog && echo '{input_data}' | /code/prog"]
+        cmd = ["/bin/sh", "-c", f"g++ /code/{filename} -o /code/prog && /code/prog"]
     elif language == 'java':
         container = client.containers.get('online-ide-java-1')
         class_name = "Main"
-        cmd = ["/bin/sh", "-c", f"javac /code/{filename} && echo '{input_data}' | java -cp /code {class_name}"]
+        cmd = ["/bin/sh", "-c", f"javac /code/{filename} && java -cp /code {class_name}"]
     elif language == 'c':
         container = client.containers.get('online-ide-c-1')
-        cmd = ["/bin/sh", "-c", f"gcc /code/{filename} -o /code/prog && echo '{input_data}' | /code/prog"]
+        cmd = ["/bin/sh", "-c", f"gcc /code/{filename} -o /code/prog && /code/prog"]
+    elif language == 'py':
+        container = client.containers.get('online-ide-python-1')
+        cmd = ["/bin/sh", "-c", f"python3 /code/{filename}"]
     else:
         return jsonify({'output': 'Unsupported language'})
-    
+
     exit_code, output = container.exec_run(cmd, demux=True)
-    
+
     end_time = time.time()
     execution_time = end_time - start_time
-    
-    # Get memory usage (this is a simplified version, might not be accurate)
+
+    # Get memory usage (simplified version)
     stats = container.stats(stream=False)
     memory_usage = stats['memory_stats']['usage'] / (1024 * 1024)  # Convert to MB
-    
+
     os.remove(filepath)
-    
+
     return jsonify({
         'output': output[0].decode() if output[0] else '',
         'error': output[1].decode() if output[1] else '',
@@ -94,26 +97,6 @@ def create_contest():
     # In a real application, you'd save this to a database
     # For now, we'll just return success
     return jsonify({'success': True})
-
-def load_problems():
-    if os.path.exists('problems/problems.json'):
-        with open('problems/problems.json', 'r') as f:
-            return json.load(f)
-    return []
-
-def save_problems(problems):
-    with open('problems/problems.json', 'w') as f:
-        json.dump(problems, f, indent=2)
-
-def load_submissions():
-    if os.path.exists('problems/submissions.json'):
-        with open('problems/submissions.json', 'r') as f:
-            return json.load(f)
-    return []
-
-def save_submissions(submissions):
-    with open('problems/submissions.json', 'w') as f:
-        json.dump(submissions, f, indent=2)
 
 @app.route('/arena')
 def arena():
@@ -184,42 +167,44 @@ def problem_submissions(problem_id):
 def run_code(language, code, input_data):
     filename = f"{uuid.uuid4()}.{language}"
     filepath = f"/app/code/{filename}"
-    
+
     with open(filepath, 'w') as f:
         f.write(code)
-    
+
     start_time = time.time()
-    
+
     if language == 'cpp':
         container = client.containers.get('online-ide-cpp-1')
-        cmd = ["/bin/sh", "-c", f"g++ /code/{filename} -o /code/prog && echo '{input_data}' | /code/prog"]
+        cmd = ["/bin/sh", "-c", f"g++ /code/{filename} -o /code/prog && /code/prog"]
     elif language == 'java':
         container = client.containers.get('online-ide-java-1')
         class_name = "Main"
-        cmd = ["/bin/sh", "-c", f"javac /code/{filename} && echo '{input_data}' | java -cp /code {class_name}"]
+        cmd = ["/bin/sh", "-c", f"javac /code/{filename} && java -cp /code {class_name}"]
     elif language == 'c':
         container = client.containers.get('online-ide-c-1')
-        cmd = ["/bin/sh", "-c", f"gcc /code/{filename} -o /code/prog && echo '{input_data}' | /code/prog"]
+        cmd = ["/bin/sh", "-c", f"gcc /code/{filename} -o /code/prog && /code/prog"]
+    elif language == 'py':
+        container = client.containers.get('online-ide-python-1')
+        cmd = ["/bin/sh", "-c", f"python3 /code/{filename}"]
     else:
         return {'output': 'Unsupported language', 'error': 'Unsupported language'}
-    
+
     exit_code, output = container.exec_run(cmd, demux=True)
-    
+
     end_time = time.time()
     execution_time = end_time - start_time
-    
+
     stats = container.stats(stream=False)
     memory_usage = stats['memory_stats']['usage'] / (1024 * 1024)  # Convert to MB
-    
+
     os.remove(filepath)
-    
+
     return {
         'output': output[0].decode() if output[0] else '',
         'error': output[1].decode() if output[1] else '',
         'execution_time': f"{execution_time:.2f} seconds",
         'memory_usage': f"{memory_usage:.2f} MB"
     }
-    
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
