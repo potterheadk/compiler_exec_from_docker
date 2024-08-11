@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - /var/run/docker.sock:/var/run/docker.sock  # Add this line
+    environment:
+      - FLASK_ENV=development
+    depends_on:
+      - cpp
+      - java
+      - c
+
+  cpp:
+    image: gcc:latest
+    volumes:
+      - ./code:/code
+    working_dir: /code
+    command: tail -f /dev/null  # Keep container running
+
+  java:
+    image: openjdk:latest
+    volumes:
+      - ./code:/code
+    working_dir: /code
+    command: tail -f /dev/null  # Keep container running
+
+  c:
+    image: gcc:latest
+    volumes:
+      - ./code:/code
+    working_dir: /code
+    command: tail -f /dev/null  # Keep container running
